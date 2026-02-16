@@ -105,7 +105,6 @@ pub async fn get_sync_data(
         collections: Vec::new(),  
         policies: Vec::new(),  
         sends: Vec::new(),  
-        sends,
         domains: serde_json::Value::Null,  
         object: "sync".to_string(),  
     };
