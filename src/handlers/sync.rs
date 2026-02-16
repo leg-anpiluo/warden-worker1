@@ -10,6 +10,7 @@ use crate::{
     models::{
         cipher::{Cipher, CipherDBModel},
         folder::{Folder, FolderResponse},
+        send::{send_to_json, SendDBModel},
         sync::{Profile, SyncResponse},
         user::User,
     },
@@ -64,6 +65,18 @@ pub async fn get_sync_data(
         .map(|cipher| cipher.into())
         .collect::<Vec<Cipher>>();
 
+    let send_rows: Vec<Value> = db
+        .prepare("SELECT * FROM sends WHERE user_id = ?1 ORDER BY updated_at DESC")
+        .bind(&[user_id.clone().into()])?
+        .all()
+        .await?
+        .results()?;
+    let sends = send_rows
+        .into_iter()
+        .filter_map(|v| serde_json::from_value::<SendDBModel>(v).ok())
+        .map(|s| send_to_json(&s))
+        .collect::<Vec<_>>();
+
     let time = chrono::DateTime::parse_from_rfc3339(&user.created_at)
         .map_err(|_| AppError::Internal)?
         .to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
@@ -92,6 +105,7 @@ pub async fn get_sync_data(
         collections: Vec::new(),  
         policies: Vec::new(),  
         sends: Vec::new(),  
+        sends,
         domains: serde_json::Value::Null,  
         object: "sync".to_string(),  
     };
